@@ -125,8 +125,13 @@ class DjangoCodeGenerator {
       tag = tags[i];
 
       if (tag.kind == "string"){
-        codeWriter.writeLine(tag.name + "='" + tag.value.trim().split('\n') + "'");
-
+          if (tag.name == "__str__") {
+            
+          } else if (tag.name == "unique_together") {
+            codeWriter.writeLine(tag.name + "=" + tag.value.trim().split('\n'));
+          } else {
+			codeWriter.writeLine(tag.name + "='" + tag.value.trim().split('\n') + "'");
+		  }
       } else if (tag.kind == "number"){
         codeWriter.writeLine(tag.name + "=" + tag.number);
 
@@ -145,6 +150,33 @@ class DjangoCodeGenerator {
     codeWriter.outdent();
     codeWriter.writeLine();
   }
+
+
+/**
+   * Write __str__
+   * @param {StringWriter} codeWriter
+   * @param {string} text
+   * @param {Object} options
+   */
+  write__str__ (codeWriter, elem, options) {
+    var tags = elem.tags;
+    var tag;
+
+    for (var i = 0, len = tags.length; i < len; i++) {
+      tag = tags[i];
+
+      if (tag.kind == "string"){
+		  if (tag.name == "__str__") {
+            codeWriter.writeLine('def __str__(self):');
+            codeWriter.indent();
+            codeWriter.writeLine('return self.' + tag.value.trim().split('\n'));	
+            codeWriter.outdent();
+            codeWriter.writeLine();
+		  }
+      }
+    }
+  }
+  
 
   /**
    * Write Variable
@@ -301,11 +333,12 @@ class DjangoCodeGenerator {
     var tags = asso.tags;
     var tags_str = "";
 
-    console.log(tags);
-
     tags_str += tags.map(function (e) {
       if (e.kind == "string"){
-        return e.name + "='" + e.value.trim().split('\n') + "'";   
+        if (e.name == 'on_delete')
+		  return e.name + "=" + e.value.trim().split('\n');   
+	    else 
+		  return e.name + "='" + e.value.trim().split('\n') + "'";   
       }else if (e.kind == "number"){
         return e.name + "=" + e.number;
       }else if (e.kind == "boolean"){
@@ -331,7 +364,7 @@ class DjangoCodeGenerator {
         if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && asso.end2.multiplicity == "1"){
           var refObjName = asso.end2.reference.name;
           var var_name = asso.name;
-          codeWriter.writeLine(var_name + " = models.ForeignKey('" + asso.end2.reference.name + "'" + tags_str +", on_delete=models.CASCADE)");
+          codeWriter.writeLine(var_name + " = models.ForeignKey('" + asso.end2.reference.name + "'" + tags_str +")");
         }
 
         if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..*', '1..*', '*'].includes(asso.end2.multiplicity.trim())){
@@ -410,6 +443,7 @@ class DjangoCodeGenerator {
     // Docstring
     this.writeDoc(codeWriter, elem.documentation, options);
     this.writeMeta(codeWriter, elem, options);
+    this.write__str__(codeWriter, elem, options);
 
     if (elem.attributes.length === 0 && elem.operations.length === 0) {
       codeWriter.writeLine('pass');
@@ -507,6 +541,7 @@ function mapBasicTypesToDjangoFieldClass(elem){
     "string": "models.CharField",
     "text": "models.TextField",
     "integer": "models.IntegerField",
+    "float": "models.FloatField",
     "decimal": "models.DecimalField",
     "boolean": "models.BooleanField",
     "date": "models.DateField",
