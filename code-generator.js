@@ -549,7 +549,8 @@ function mapBasicTypesToDjangoFieldClass(elem){
     "datetime": "models.DateTimeField",
     "email": "models.EmailField",
     "file": "models.FileField",
-    "foreign": "models.ForeignKey"
+    "foreign": "models.ForeignKey",
+    "onetoone": "models.OneToOne"
   };
 
   line = type_maps[elem.type.name];
