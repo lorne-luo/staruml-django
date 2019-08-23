@@ -41,6 +41,8 @@ class DjangoCodeGenerator {
 
         /** @member {string} */
         this.basePath = basePath;
+
+        this.filePaths = [];
     }
 
     /**
@@ -148,7 +150,6 @@ class DjangoCodeGenerator {
             codeWriter.writeLine('pass');
         }
         codeWriter.outdent();
-        codeWriter.writeLine();
     }
 
 
@@ -500,7 +501,7 @@ class DjangoCodeGenerator {
 
         // Package (a directory with __init__.py)
         if (elem instanceof type.UMLPackage) {
-            fullPath = path.join(basePath, elem.name);
+            fullPath = path.join(basePath, elem.name.toLowerCase());
             fs.mkdirSync(fullPath);
             file = path.join(fullPath, '__init__.py');
             fs.writeFileSync(file, '');
@@ -511,17 +512,27 @@ class DjangoCodeGenerator {
             // Class
         } else if (elem instanceof type.UMLClass || elem instanceof type.UMLInterface) {
 
-            // fullPath = basePath + '/models.py';
-            fullPath = basePath + '/' + elem.name.toLowerCase() + '.py';
+            fullPath = basePath + '/models.py';
+            // fullPath = basePath + '/' + elem.name.toLowerCase() + '.py';
+
+
             codeWriter = new codegen.CodeWriter(this.getIndentString(options));
 
-            //codeWriter.writeLine(options.installPath)
-            codeWriter.writeLine('#-*- coding: utf-8 -*-');
-            codeWriter.writeLine();
-            codeWriter.writeLine(options.djangoModelsPackage);
-            codeWriter.writeLine();
+            if (!this.filePaths.includes(fullPath)){
+                //codeWriter.writeLine(options.installPath)
+                codeWriter.writeLine('#-*- coding: utf-8 -*-');
+                codeWriter.writeLine();
+                codeWriter.writeLine(options.djangoModelsPackage);
+                codeWriter.writeLine();
+            }
             this.writeClass(codeWriter, elem, options);
-            fs.writeFileSync(fullPath, codeWriter.getData());
+
+            if (this.filePaths.includes(fullPath)){
+                fs.appendFileSync(fullPath, codeWriter.getData());
+            } else{
+                fs.writeFileSync(fullPath, codeWriter.getData());
+                this.filePaths.push(fullPath);
+            }
 
             // Enum
         } else if (elem instanceof type.UMLEnumeration) {
