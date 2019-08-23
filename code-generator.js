@@ -353,6 +353,8 @@ class DjangoCodeGenerator {
             tags_str = ", " + tags_str;
         }
 
+        // codeWriter.writeLine(asso.end1.reference.name +", "+ elem.name+", "+ asso.end2.navigable +", "+ asso.end2.multiplicity +", "+ asso.end1.multiplicity);
+
         if (asso.end1.reference === elem && asso.end2.navigable === true && asso.end2.multiplicity && asso.end1.multiplicity) {
             if (asso.end1.multiplicity == "1" && asso.end2.multiplicity == "1") {
                 var refObjName = asso.end2.reference.name;
@@ -363,7 +365,7 @@ class DjangoCodeGenerator {
             if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && asso.end2.multiplicity == "1") {
                 var refObjName = asso.end2.reference.name;
                 var var_name = asso.name || refObjName.toLowerCase();
-                codeWriter.writeLine(var_name + " = models.ForeignKey('" + asso.end2.reference.name + "'" + tags_str + ")");
+                codeWriter.writeLine(var_name + " = models.ForeignKey('" + asso.end2.reference.name + "'" + tags_str + ", on_delete=models.CASCADE)");
             }
 
             if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..*', '1..*', '*'].includes(asso.end2.multiplicity.trim())) {
@@ -448,7 +450,12 @@ class DjangoCodeGenerator {
         this.writeMeta(codeWriter, elem, options);
         this.write__str__(codeWriter, elem, options);
 
-        if (elem.attributes.length === 0 && elem.operations.length === 0) {
+        // from associations
+        var associations = app.repository.getRelationshipsOf(elem, function (rel) {
+            return (rel instanceof type.UMLAssociation);
+        });
+
+        if (elem.attributes.length === 0 && elem.operations.length === 0 && associations.length === 0) {
             codeWriter.writeLine('pass');
         } else {
 
@@ -460,11 +467,6 @@ class DjangoCodeGenerator {
 
             // Constructor
             // this.writeConstructor(codeWriter, elem, options)
-
-            // from associations
-            var associations = app.repository.getRelationshipsOf(elem, function (rel) {
-                return (rel instanceof type.UMLAssociation);
-            });
 
             // Relations
             for (var i = 0, len = associations.length; i < len; i++) {
@@ -509,6 +511,7 @@ class DjangoCodeGenerator {
             // Class
         } else if (elem instanceof type.UMLClass || elem instanceof type.UMLInterface) {
 
+            // fullPath = basePath + '/models.py';
             fullPath = basePath + '/' + elem.name.toLowerCase() + '.py';
             codeWriter = new codegen.CodeWriter(this.getIndentString(options));
 
