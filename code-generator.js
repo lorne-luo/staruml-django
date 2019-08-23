@@ -357,22 +357,32 @@ class DjangoCodeGenerator {
         // codeWriter.writeLine(asso.end1.reference.name +", "+ elem.name+", "+ asso.end2.navigable +", "+ asso.end2.multiplicity +", "+ asso.end1.multiplicity);
 
         if (asso.end1.reference === elem && asso.end2.navigable === true && asso.end2.multiplicity && asso.end1.multiplicity) {
-            if (asso.end1.multiplicity == "1" && asso.end2.multiplicity == "1") {
-                var refObjName = asso.end2.reference.name;
+            var refObjName;
+            if (asso.end2.reference._parent) {
+                refObjName = asso.end2.reference._parent.name.toLowerCase() + "." + asso.end2.reference.name;
+            } else {
+                refObjName = asso.end2.reference.name;
+            }
+
+            if (asso.end2.multiplicity.includes("0")) {
+                tags_str += ", blank=True, null=True";
+            } else {
+                tags_str += ", blank=False, null=False";
+            }
+
+            if (['0..1', '1'].includes(asso.end1.multiplicity) && ['0..1', '1'].includes(asso.end2.multiplicity)) {
                 var var_name = asso.name || refObjName.toLowerCase();
                 codeWriter.writeLine(var_name + " = models.OneToOneField('" + refObjName + "'" + tags_str + ")");
             }
 
-            if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && asso.end2.multiplicity == "1") {
-                var refObjName = asso.end2.reference.name;
-                var var_name = asso.name || refObjName.toLowerCase();
-                codeWriter.writeLine(var_name + " = models.ForeignKey('" + asso.end2.reference.name + "'" + tags_str + ", on_delete=models.CASCADE)");
+            if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..1', '1'].includes(asso.end2.multiplicity)) {
+                var var_name = asso.name || asso.end2.reference.name.toLowerCase();
+                codeWriter.writeLine(var_name + " = models.ForeignKey('" + refObjName + "'" + tags_str + ", on_delete=models.CASCADE)");
             }
 
             if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..*', '1..*', '*'].includes(asso.end2.multiplicity.trim())) {
-                var refObjName = asso.end2.reference.name;
-                var var_name = asso.name || refObjName.toLowerCase();
-                codeWriter.writeLine(var_name + " = models.ManyToManyField('" + asso.end2.reference.name + "'" + tags_str + ")");
+                var var_name = asso.name || asso.end2.reference.name.toLowerCase();
+                codeWriter.writeLine(var_name + " = models.ManyToManyField('" + refObjName + "'" + tags_str + ")");
             }
         }
     }
@@ -518,7 +528,7 @@ class DjangoCodeGenerator {
 
             codeWriter = new codegen.CodeWriter(this.getIndentString(options));
 
-            if (!this.filePaths.includes(fullPath)){
+            if (!this.filePaths.includes(fullPath)) {
                 //codeWriter.writeLine(options.installPath)
                 codeWriter.writeLine('#-*- coding: utf-8 -*-');
                 codeWriter.writeLine();
@@ -527,9 +537,9 @@ class DjangoCodeGenerator {
             }
             this.writeClass(codeWriter, elem, options);
 
-            if (this.filePaths.includes(fullPath)){
+            if (this.filePaths.includes(fullPath)) {
                 fs.appendFileSync(fullPath, codeWriter.getData());
-            } else{
+            } else {
                 fs.writeFileSync(fullPath, codeWriter.getData());
                 this.filePaths.push(fullPath);
             }
