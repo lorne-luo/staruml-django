@@ -223,13 +223,10 @@ class DjangoCodeGenerator {
 
             if (elem.multiplicity && ['0..*', '1..*', '*'].includes(elem.multiplicity.trim())) {
                 line += ' = []';
-
             } else if (elem.defaultValue && elem.defaultValue.length > 0) {
                 line += ' = ' + elem.defaultValue;
-
             } else if (elem.type) {
                 line += ' = ' + mapBasicTypesToDjangoFieldClass(elem);
-
             } else {
                 line += ' = None';
             }
@@ -367,17 +364,17 @@ class DjangoCodeGenerator {
             if (asso.end2.multiplicity.includes("0")) {
                 tags_str += ", blank=True, null=True";
             } else {
-                tags_str += ", blank=False, null=False";
+                tags_str += ", blank=True, null=True";
             }
 
             if (['0..1', '1'].includes(asso.end1.multiplicity) && ['0..1', '1'].includes(asso.end2.multiplicity)) {
                 var var_name = asso.name || refObjName.toLowerCase();
-                codeWriter.writeLine(var_name + " = models.OneToOneField('" + refObjName + "'" + tags_str + ")");
+                codeWriter.writeLine(var_name + " = models.OneToOneField('" + refObjName + "'" + tags_str + ", on_delete=models.DO_NOTHING)");
             }
 
             if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..1', '1'].includes(asso.end2.multiplicity)) {
                 var var_name = asso.name || asso.end2.reference.name.toLowerCase();
-                codeWriter.writeLine(var_name + " = models.ForeignKey('" + refObjName + "'" + tags_str + ", on_delete=models.CASCADE)");
+                codeWriter.writeLine(var_name + " = models.ForeignKey('" + refObjName + "'" + tags_str + ", on_delete=models.DO_NOTHING)");
             }
 
             if (['0..*', '1..*', '*'].includes(asso.end1.multiplicity.trim()) && ['0..*', '1..*', '*'].includes(asso.end2.multiplicity.trim())) {
@@ -569,23 +566,46 @@ function mapBasicTypesToDjangoFieldClass(elem) {
         "text": "models.TextField",
         "integer": "models.IntegerField",
         "biginteger": "models.BigIntegerField",
+        "smallinteger": "models.SmallIntegerField",
         "float": "models.FloatField",
         "decimal": "models.DecimalField",
         "boolean": "models.BooleanField",
+        "nullbool": "models.NullBooleanField",
         "date": "models.DateField",
         "datetime": "models.DateTimeField",
         "email": "models.EmailField",
         "file": "models.FileField",
+        "image": "models.ImageField",
         "foreign": "models.ForeignKey",
         "onetoone": "models.OneToOneField",
         "manytomany": "models.ManyToManyField"
     };
 
-    line = type_maps[elem.type.name];
+    var field_maps = {
+        "models.CharField" : "max_length=255, blank=True, null=False,",
+        "models.TextField" : "max_length=1024, blank=True, null=False,",
+        "models.IntegerField" : "blank=True, null=True,",
+        "models.BigIntegerField" : "blank=True, null=True,",
+        "models.SmallIntegerField" : "blank=True, null=True,",
+        "models.FloatField" : "blank=True, null=True,",
+        "models.DecimalField" : "max_digits=14, decimal_places=2,",
+        "models.BooleanField" : "default=,",
+        "models.NullBooleanField" : "default=None,",
+        "models.DateField" : "auto_now=False, auto_now_add=False,",
+        "models.DateTimeField" : "auto_now=False, auto_now_add=False,",
+        "models.EmailField" : "blank=True, null=False,",
+        "models.FileField" : "blank=True, null=True,",
+        "models.ImageField" : "blank=True, null=True,",
+        "models.ForeignKey" : "",
+        "models.OneToOneField" : "",
+        "models.ManyToManyField" : ""
+    };
+
+    line = type_maps[elem.type];
 
     var tags = elem.tags;
 
-    line += '(' + tags.map(function (e) {
+    line += '(verbose_name="'+elem.name+'", ' +field_maps[line] + tags.map(function (e) {
         if (e.kind == "string") {
             if (e.name == 'on_delete')
                 return e.name + "=" + e.value.trim().split('\n');
