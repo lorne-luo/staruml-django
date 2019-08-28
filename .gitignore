@@ -7,3 +7,5 @@ coverage
 logs
 *.log
 npm-debug.log*
+.idea
+venv
